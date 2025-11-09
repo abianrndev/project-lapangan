@@ -3,7 +3,6 @@ import '../../constants/colors.dart';
 import '../../constants/text_styles.dart';
 import '../../models/field.dart';
 import '../../widgets/admin/field_form.dart';
-import 'package:go_router/go_router.dart';
 
 class FieldManagementScreen extends StatefulWidget {
   const FieldManagementScreen({Key? key}) : super(key: key);
@@ -148,7 +147,7 @@ class _FieldManagementScreenState extends State<FieldManagementScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           color: AppColors.textPrimary,
-          onPressed: () => context.pop(),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       floatingActionButton: FloatingActionButton(
