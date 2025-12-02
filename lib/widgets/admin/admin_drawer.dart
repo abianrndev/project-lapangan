@@ -50,6 +50,11 @@ class AdminDrawer extends StatelessWidget {
             title: const Text('Keluar'),
             onTap: () => context.go('/login'),
           ),
+          ListTile(
+            leading: const Icon(Icons.calendar_month),
+            title: const Text('Kelola Booking'),
+            onTap: () => context.go('/admin/bookings'),
+          ),
         ],
       ),
     );

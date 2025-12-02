@@ -6,6 +6,10 @@ import '../../widgets/custom_bottom_nav.dart';
 import '../../widgets/field_carousel.dart';
 import '../../widgets/custom_button.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
+import '../../providers/booking_provider.dart';
+import '../../widgets/booking/booking_dialog.dart';
+import '../../models/booking.dart';
 
 class UserHomeScreen extends StatefulWidget {
   const UserHomeScreen({Key? key}) : super(key: key);
@@ -17,14 +21,14 @@ class UserHomeScreen extends StatefulWidget {
 class _UserHomeScreenState extends State<UserHomeScreen> {
   int _currentNavIndex = 0;
 
-  // ini cuma mockup pak , nanti diganti real data
+  // Contoh data lapangan (nanti akan diganti dengan data dari backend)
   final List<Field> _fields = [
     Field(
       id: '1',
       name: 'Lapangan A',
       description: 'Lapangan futsal indoor dengan rumput sintetis',
-      price: 50000,
-      imageUrl: 'https://contoh.com/field-a.jpg',
+      price: 150000,
+      imageUrl: 'https://example.com/field-a.jpg',
     ),
     Field(
       id: '2',
@@ -36,17 +40,13 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   ];
 
   void _launchWhatsApp() async {
-    // Ganti nomor WhatsApp admin sesuai kebutuhan
     const phoneNumber = '6281234567890';
     const message = 'Halo, saya ingin memesan lapangan...';
-
     final url =
         'https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}';
-
     if (await canLaunch(url)) {
       await launch(url);
     } else {
-      // Tampilkan error dialog jika tidak bisa membuka WhatsApp
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -71,16 +71,14 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          '19jt Lapangan Padel',
+          'SportField',
           style: AppTextStyles.headerLarge.copyWith(color: AppColors.primary),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             color: AppColors.textPrimary,
-            onPressed: () {
-              // TODO: Implement notifications
-            },
+            onPressed: () {},
           ),
         ],
       ),
@@ -96,14 +94,14 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 children: [
                   Text('Selamat Datang,', style: AppTextStyles.bodyText),
                   Text(
-                    'Siap untuk futsal hari ini?',
+                    'Mau olahraga apa hari ini?',
                     style: AppTextStyles.headerLarge,
                   ),
                 ],
               ),
             ),
 
-            // Featured Fields Carousel
+            // ---------- FieldCarousel: TARUH KODE BOOKING DIALOG DI SINI ----------
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16.0),
               child: Column(
@@ -120,7 +118,39 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   FieldCarousel(
                     fields: _fields,
                     onFieldSelected: (field) {
-                      // TODO: Navigate to field detail
+                      // buka dialog booking untuk field yg dipilih
+                      showDialog(
+                        context: context,
+                        builder: (context) => BookingDialog(
+                          field: field,
+                          onSubmit: (userName, date, startTime, endTime, note) {
+                            final id = DateTime.now().millisecondsSinceEpoch
+                                .toString();
+                            final booking = Booking(
+                              id: id,
+                              fieldId: field.id,
+                              fieldName: field.name,
+                              userName: userName,
+                              date: date,
+                              startTime: startTime,
+                              endTime: endTime,
+                              note: note,
+                            );
+                            Provider.of<BookingProvider>(
+                              context,
+                              listen: false,
+                            ).addBooking(booking);
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Permintaan booking dikirim (status: Pending)',
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
                     },
                   ),
                 ],
@@ -162,9 +192,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       bottomNavigationBar: CustomBottomNav(
         currentIndex: _currentNavIndex,
         onTap: (index) {
-          setState(() {
-            _currentNavIndex = index;
-          });
+          setState(() => _currentNavIndex = index);
         },
       ),
     );
