@@ -26,7 +26,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen> {
 
   String _formatCurrency(int amount) {
     final formatter = NumberFormat.currency(
-      locale: 'id_ID',
+      locale: 'id',
       symbol: 'Rp ',
       decimalDigits: 0,
     );
@@ -36,7 +36,7 @@ class _BookingManagementScreenState extends State<BookingManagementScreen> {
   String _formatDate(String dateStr) {
     try {
       final date = DateTime.parse(dateStr);
-      return DateFormat('dd MMM yyyy', 'id_ID').format(date);
+      return DateFormat('dd MMM yyyy').format(date);
     } catch (e) {
       return dateStr;
     }

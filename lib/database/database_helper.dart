@@ -1,5 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
 import '../models/user.dart';
 import '../models/field.dart';
 import '../models/booking.dart';
@@ -72,20 +74,27 @@ class DatabaseHelper {
       )
     ''');
 
-    // Insert default admin user
+    // Helper function to hash password
+    String hashPassword(String password) {
+      final bytes = utf8.encode(password);
+      final digest = sha256.convert(bytes);
+      return digest.toString();
+    }
+
+    // Insert default admin user with hashed password
     await db.insert('users', {
       'name': 'Admin',
       'email': 'admin@lapangan.com',
-      'password': 'admin123', // In production, this should be hashed
+      'password': hashPassword('admin123'),
       'phone': '08123456789',
       'role': 'admin',
     });
 
-    // Insert default user
+    // Insert default user with hashed password
     await db.insert('users', {
       'name': 'User Test',
       'email': 'user@test.com',
-      'password': 'user123',
+      'password': hashPassword('user123'),
       'phone': '08123456789',
       'role': 'user',
     });
@@ -338,21 +347,20 @@ class DatabaseHelper {
       SELECT COUNT(*) as count FROM bookings 
       WHERE field_id = ? 
       AND booking_date = ? 
-      AND status != 'rejected' 
-      AND status != 'cancelled'
+      AND status NOT IN ('rejected', 'cancelled')
       AND (
         (start_time < ? AND end_time > ?)
         OR (start_time < ? AND end_time > ?)
-        OR (start_time >= ? AND end_time <= ?)
+        OR (start_time >= ? AND start_time < ?)
       )
     ''';
     
     List<dynamic> args = [
       fieldId,
       bookingDate,
-      endTime, startTime,
-      endTime, startTime,
-      startTime, endTime,
+      endTime, startTime,  // Existing ends after new starts
+      endTime, startTime,  // Existing starts before new ends (duplicate for SQL formatting)
+      startTime, endTime,  // Existing starts within new time range
     ];
 
     if (excludeBookingId != null) {

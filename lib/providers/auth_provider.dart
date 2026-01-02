@@ -35,9 +35,9 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
 
-      // In production, compare hashed passwords
-      // For now, we're doing simple comparison for development
-      if (user.password == password) {
+      // Compare hashed passwords
+      final hashedPassword = _hashPassword(password);
+      if (user.password == hashedPassword) {
         _currentUser = user;
         _isLoading = false;
         notifyListeners();
@@ -78,11 +78,12 @@ class AuthProvider extends ChangeNotifier {
         };
       }
 
-      // Create new user
+      // Create new user with hashed password
+      final hashedPassword = _hashPassword(password);
       final user = User(
         name: name,
         email: email,
-        password: password, // In production, hash this
+        password: hashedPassword,
         phone: phone,
         role: 'user',
       );

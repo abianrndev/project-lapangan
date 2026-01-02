@@ -65,25 +65,34 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     final url =
         'https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}';
     
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Error'),
-          content: const Text('Tidak dapat membuka WhatsApp'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
+    try {
+      final uri = Uri.parse(url);
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      
+      if (!launched && mounted) {
+        _showErrorDialog('Tidak dapat membuka WhatsApp');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorDialog('Error: ${e.toString()}');
+      }
     }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

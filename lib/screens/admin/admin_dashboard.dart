@@ -54,7 +54,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   String _formatCurrency(dynamic value) {
     if (value == null) return 'Rp 0';
     final formatter = NumberFormat.currency(
-      locale: 'id_ID',
+      locale: 'id',
       symbol: 'Rp ',
       decimalDigits: 0,
     );

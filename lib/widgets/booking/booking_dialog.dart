@@ -17,6 +17,8 @@ class BookingDialog extends StatefulWidget {
 }
 
 class _BookingDialogState extends State<BookingDialog> {
+  static const int defaultBookingDurationHours = 2;
+  
   final _formKey = GlobalKey<FormState>();
   final _noteController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
@@ -50,7 +52,7 @@ class _BookingDialogState extends State<BookingDialog> {
         final endMinutes = _endTime.hour * 60 + _endTime.minute;
         if (endMinutes <= startMinutes) {
           _endTime = TimeOfDay(
-            hour: (_startTime.hour + 2) % 24,
+            hour: (_startTime.hour + defaultBookingDurationHours) % 24,
             minute: _startTime.minute,
           );
         }
