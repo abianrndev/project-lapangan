@@ -12,6 +12,17 @@ class Booking {
   final String? note;
   final DateTime? createdAt;
 
+  bool get isPending => status == 'pending';
+  bool get isConfirmed => status == 'confirmed';
+  bool get isCompleted => status == 'completed';
+  bool get isCancelled => status == 'cancelled';
+  bool get isRejected => status == 'rejected';
+
+  // ADD: Available actions based on current state
+  bool get canConfirmOrReject => isPending;
+  bool get canCompleteOrCancel => isConfirmed;
+  bool get canDelete => true; // Admin can always delete
+
   Booking({
     this.id,
     required this.userId,
@@ -74,7 +85,8 @@ class Booking {
       'startTime': startTime,
       'endTime': endTime,
       'status': status,
-      'createdAt': createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+      'createdAt':
+          createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
       'note': note,
     };
   }
@@ -82,11 +94,17 @@ class Booking {
   factory Booking.fromJson(Map<String, dynamic> json) {
     return Booking(
       id: json['id'] is String ? int.tryParse(json['id']) : json['id'],
-      userId: json['userId'] is String ? int.parse(json['userId']) : json['userId'] ?? 0,
-      fieldId: json['fieldId'] is String ? int.parse(json['fieldId']) : json['fieldId'],
+      userId: json['userId'] is String
+          ? int.parse(json['userId'])
+          : json['userId'] ?? 0,
+      fieldId: json['fieldId'] is String
+          ? int.parse(json['fieldId'])
+          : json['fieldId'],
       fieldName: json['fieldName'],
       userName: json['userName'],
-      bookingDate: json['date'] is String ? json['date'] : json['date'].toString(),
+      bookingDate: json['date'] is String
+          ? json['date']
+          : json['date'].toString(),
       startTime: json['startTime'],
       endTime: json['endTime'],
       totalPrice: json['totalPrice'] ?? 0,
@@ -132,4 +150,3 @@ class Booking {
     );
   }
 }
-

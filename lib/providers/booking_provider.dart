@@ -81,7 +81,7 @@ class BookingProvider extends ChangeNotifier {
 
     try {
       final db = DatabaseHelper.instance;
-      
+
       // Check for conflicts
       final hasConflict = await db.hasBookingConflict(
         booking.fieldId,
@@ -100,7 +100,7 @@ class BookingProvider extends ChangeNotifier {
       }
 
       final id = await db.createBooking(booking);
-      
+
       if (id > 0) {
         // Reload bookings
         await loadAllBookings();
@@ -113,35 +113,40 @@ class BookingProvider extends ChangeNotifier {
 
       _isLoading = false;
       notifyListeners();
-      return {
-        'success': false,
-        'message': 'Gagal membuat booking',
-      };
+      return {'success': false, 'message': 'Gagal membuat booking'};
     } catch (e) {
       _isLoading = false;
       notifyListeners();
-      return {
-        'success': false,
-        'message': 'Error: ${e.toString()}',
-      };
+      return {'success': false, 'message': 'Error: ${e.toString()}'};
     }
   }
 
   // Update booking status
-  Future<bool> updateStatus(int bookingId, String status) async {
+  Future<bool> updateBookingStatus(int bookingId, String newStatus) async {
     _isLoading = true;
     notifyListeners();
 
     try {
       final db = DatabaseHelper.instance;
-      final result = await db.updateBookingStatus(bookingId, status);
-      
+
+      // Get booking details first (untuk revenue calculation)
+      final booking = _bookings.firstWhere((b) => b.id == bookingId);
+
+      // Update status di database
+      final result = await db.updateBookingStatus(bookingId, newStatus);
+
       if (result > 0) {
-        // Update local booking
+        // If status is "completed", add to today's revenue
+        if (newStatus == 'completed') {
+          await _addToTodaysRevenue(booking.totalPrice);
+        }
+
+        // Update local state
         final index = _bookings.indexWhere((b) => b.id == bookingId);
         if (index != -1) {
-          _bookings[index].status = status;
+          _bookings[index] = booking.copyWith(status: newStatus);
         }
+
         _isLoading = false;
         notifyListeners();
         return true;
@@ -157,15 +162,25 @@ class BookingProvider extends ChangeNotifier {
     }
   }
 
+  // Add booking revenue to today's earnings
+  Future<void> _addToTodaysRevenue(int amount) async {
+    try {
+      final db = DatabaseHelper.instance;
+      await db.addTodaysRevenue(amount);
+    } catch (e) {
+      print('Error adding to revenue: $e');
+    }
+  }
+
   // Delete booking
-  Future<bool> removeBooking(int bookingId) async {
+  Future<bool> deleteBooking(int bookingId) async {
     _isLoading = true;
     notifyListeners();
 
     try {
       final db = DatabaseHelper.instance;
       final result = await db.deleteBooking(bookingId);
-      
+
       if (result > 0) {
         _bookings.removeWhere((b) => b.id == bookingId);
         _isLoading = false;
@@ -183,4 +198,3 @@ class BookingProvider extends ChangeNotifier {
     }
   }
 }
-

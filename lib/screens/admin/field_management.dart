@@ -75,7 +75,7 @@ class _FieldManagementScreenState extends State<FieldManagementScreen> {
                     if (!mounted) return;
 
                     Navigator.pop(context);
-                    
+
                     if (success) {
                       _showSuccessSnackBar(
                         field == null
@@ -116,13 +116,13 @@ class _FieldManagementScreenState extends State<FieldManagementScreen> {
                 context,
                 listen: false,
               );
-              
+
               final success = await fieldProvider.deleteField(field.id!);
-              
+
               if (!mounted) return;
-              
+
               Navigator.pop(context);
-              
+
               if (success) {
                 _showSuccessSnackBar('Lapangan berhasil dihapus');
               } else {
@@ -171,9 +171,10 @@ class _FieldManagementScreenState extends State<FieldManagementScreen> {
           style: AppTextStyles.headerLarge.copyWith(color: AppColors.primary),
         ),
         leading: IconButton(
+          // ← ADD BACK BUTTON
           icon: const Icon(Icons.arrow_back),
           color: AppColors.textPrimary,
-          onPressed: () => context.pop(),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -184,171 +185,165 @@ class _FieldManagementScreenState extends State<FieldManagementScreen> {
       body: fieldProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : fields.isEmpty
-              ? Center(
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.sports_soccer,
+                    size: 64,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Belum ada lapangan',
+                    style: AppTextStyles.headerMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tekan tombol + untuk menambah lapangan',
+                    style: AppTextStyles.bodyText.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: fields.length,
+              itemBuilder: (context, index) {
+                final field = fields[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.sports_soccer,
-                        size: 64,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Belum ada lapangan',
-                        style: AppTextStyles.headerMedium.copyWith(
-                          color: AppColors.textSecondary,
+                      // Field Image
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(12),
+                        ),
+                        child: Image.network(
+                          field.imageUrl,
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 200,
+                              color: AppColors.surface,
+                              child: const Icon(Icons.error),
+                            );
+                          },
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Tekan tombol + untuk menambah lapangan',
-                        style: AppTextStyles.bodyText.copyWith(
-                          color: AppColors.textSecondary,
+                      // Field Info
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  field.name,
+                                  style: AppTextStyles.headerMedium,
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: field.isAvailable
+                                        ? AppColors.secondary.withOpacity(0.1)
+                                        : AppColors.textSecondary.withOpacity(
+                                            0.1,
+                                          ),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    field.isAvailable
+                                        ? 'Tersedia'
+                                        : 'Tidak Tersedia',
+                                    style: AppTextStyles.bodyText.copyWith(
+                                      color: field.isAvailable
+                                          ? AppColors.secondary
+                                          : AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              field.description,
+                              style: AppTextStyles.bodyText,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Rp ${field.pricePerHour.toString()}/jam',
+                              style: AppTextStyles.headerMedium.copyWith(
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () =>
+                                        _showAddEditFieldDialog(field: field),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.primary,
+                                      side: const BorderSide(
+                                        color: AppColors.primary,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    child: const Text('Edit'),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () =>
+                                        _showDeleteConfirmation(field),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.red[700],
+                                      side: BorderSide(color: Colors.red[700]!),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    child: const Text('Hapus'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: fields.length,
-                  itemBuilder: (context, index) {
-                    final field = fields[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Field Image
-                          ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(12),
-                            ),
-                            child: Image.network(
-                              field.imageUrl,
-                              height: 200,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  height: 200,
-                                  color: AppColors.surface,
-                                  child: const Icon(Icons.error),
-                                );
-                              },
-                            ),
-                          ),
-                          // Field Info
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      field.name,
-                                      style: AppTextStyles.headerMedium,
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: field.isAvailable
-                                            ? AppColors.secondary
-                                                .withOpacity(0.1)
-                                            : AppColors.textSecondary
-                                                .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        field.isAvailable
-                                            ? 'Tersedia'
-                                            : 'Tidak Tersedia',
-                                        style: AppTextStyles.bodyText.copyWith(
-                                          color: field.isAvailable
-                                              ? AppColors.secondary
-                                              : AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  field.description,
-                                  style: AppTextStyles.bodyText,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Rp ${field.pricePerHour.toString()}/jam',
-                                  style: AppTextStyles.headerMedium.copyWith(
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: OutlinedButton(
-                                        onPressed: () =>
-                                            _showAddEditFieldDialog(
-                                                field: field),
-                                        style: OutlinedButton.styleFrom(
-                                          foregroundColor: AppColors.primary,
-                                          side: const BorderSide(
-                                            color: AppColors.primary,
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 12,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                        ),
-                                        child: const Text('Edit'),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: OutlinedButton(
-                                        onPressed: () =>
-                                            _showDeleteConfirmation(field),
-                                        style: OutlinedButton.styleFrom(
-                                          foregroundColor: Colors.red[700],
-                                          side:
-                                              BorderSide(color: Colors.red[700]!),
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 12,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                        ),
-                                        child: const Text('Hapus'),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                );
+              },
+            ),
     );
   }
 }
-

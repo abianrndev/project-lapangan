@@ -77,12 +77,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Profil'),
-        ),
-        body: const Center(
-          child: Text('User tidak ditemukan'),
-        ),
+        appBar: AppBar(title: const Text('Profil')),
+        body: const Center(child: Text('User tidak ditemukan')),
       );
     }
 
@@ -92,13 +88,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'Profil Saya',
+          'Profile',
           style: AppTextStyles.headerLarge.copyWith(color: AppColors.primary),
         ),
         leading: IconButton(
+          // ← ADD BACK BUTTON
           icon: const Icon(Icons.arrow_back),
           color: AppColors.textPrimary,
-          onPressed: () => context.pop(),
+          onPressed: () => Navigator.pop(context),
         ),
         actions: [
           if (!_isEditing)
@@ -145,10 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Informasi Akun',
-                        style: AppTextStyles.headerMedium,
-                      ),
+                      Text('Informasi Akun', style: AppTextStyles.headerMedium),
                       const SizedBox(height: 16),
 
                       // Name field

@@ -24,8 +24,11 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
 
   Future<void> _loadBookings() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
-    
+    final bookingProvider = Provider.of<BookingProvider>(
+      context,
+      listen: false,
+    );
+
     if (authProvider.currentUser != null) {
       await bookingProvider.loadBookingsByUserId(authProvider.currentUser!.id!);
     }
@@ -64,9 +67,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
           style: AppTextStyles.headerLarge.copyWith(color: AppColors.primary),
         ),
         leading: IconButton(
+          // ← ADD BACK BUTTON
           icon: const Icon(Icons.arrow_back),
           color: AppColors.textPrimary,
-          onPressed: () => context.pop(),
+          onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
@@ -79,159 +83,160 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
       body: bookingProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : bookings.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.calendar_today_outlined,
-                        size: 64,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Belum ada booking',
-                        style: AppTextStyles.headerMedium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Booking lapangan untuk mulai',
-                        style: AppTextStyles.bodyText.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    size: 64,
+                    color: AppColors.textSecondary,
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadBookings,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: bookings.length,
-                    itemBuilder: (context, index) {
-                      final booking = bookings[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 2,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 16),
+                  Text(
+                    'Belum ada booking',
+                    style: AppTextStyles.headerMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Booking lapangan untuk mulai',
+                    style: AppTextStyles.bodyText.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadBookings,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: bookings.length,
+                itemBuilder: (context, index) {
+                  final booking = bookings[index];
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Field name and status
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              // Field name and status
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      booking.fieldName,
-                                      style: AppTextStyles.headerMedium,
-                                    ),
-                                  ),
-                                  _buildStatusChip(booking.status),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              
-                              // Date and time
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.calendar_today,
-                                    size: 16,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _formatDate(booking.bookingDate),
-                                    style: AppTextStyles.bodyText,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.access_time,
-                                    size: 16,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${booking.startTime} - ${booking.endTime}',
-                                    style: AppTextStyles.bodyText,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              
-                              // Price
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Total Harga:',
-                                      style: AppTextStyles.bodyText,
-                                    ),
-                                    Text(
-                                      _formatCurrency(booking.totalPrice),
-                                      style: AppTextStyles.headerMedium.copyWith(
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                  ],
+                              Expanded(
+                                child: Text(
+                                  booking.fieldName,
+                                  style: AppTextStyles.headerMedium,
                                 ),
                               ),
-                              
-                              // Note
-                              if (booking.note != null && booking.note!.isNotEmpty) ...[
-                                const SizedBox(height: 12),
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surface,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Icon(
-                                        Icons.note_outlined,
-                                        size: 16,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          booking.note!,
-                                          style: AppTextStyles.bodyText.copyWith(
-                                            color: AppColors.textSecondary,
-                                            fontStyle: FontStyle.italic,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                              _buildStatusChip(booking.status),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Date and time
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today,
+                                size: 16,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _formatDate(booking.bookingDate),
+                                style: AppTextStyles.bodyText,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.access_time,
+                                size: 16,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${booking.startTime} - ${booking.endTime}',
+                                style: AppTextStyles.bodyText,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Price
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Total Harga:',
+                                  style: AppTextStyles.bodyText,
+                                ),
+                                Text(
+                                  _formatCurrency(booking.totalPrice),
+                                  style: AppTextStyles.headerMedium.copyWith(
+                                    color: AppColors.primary,
                                   ),
                                 ),
                               ],
-                            ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+
+                          // Note
+                          if (booking.note != null &&
+                              booking.note!.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(
+                                    Icons.note_outlined,
+                                    size: 16,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      booking.note!,
+                                      style: AppTextStyles.bodyText.copyWith(
+                                        color: AppColors.textSecondary,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
     );
   }
 

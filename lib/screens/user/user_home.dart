@@ -33,7 +33,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
   void _onNavTap(int index) {
     if (index == _currentNavIndex) return;
-    
+
     setState(() {
       _currentNavIndex = index;
     });
@@ -64,11 +64,14 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     const message = 'Halo, saya ingin memesan lapangan...';
     final url =
         'https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}';
-    
+
     try {
       final uri = Uri.parse(url);
-      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
       if (!launched && mounted) {
         _showErrorDialog('Tidak dapat membuka WhatsApp');
       }
@@ -109,6 +112,11 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         title: Text(
           'SportField',
           style: AppTextStyles.headerLarge.copyWith(color: AppColors.primary),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          color: AppColors.textPrimary,
+          onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
@@ -174,39 +182,38 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                             ),
                           )
                         : fields.isEmpty
-                            ? Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(32.0),
-                                  child: Column(
-                                    children: [
-                                      Icon(
-                                        Icons.sports_soccer,
-                                        size: 64,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        'Belum ada lapangan tersedia',
-                                        style: AppTextStyles.bodyText.copyWith(
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ],
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32.0),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.sports_soccer,
+                                    size: 64,
+                                    color: AppColors.textSecondary,
                                   ),
-                                ),
-                              )
-                            : FieldCarousel(
-                                fields: fields,
-                                onFieldSelected: (field) {
-                                  // Open booking dialog
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => BookingDialog(
-                                      field: field,
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Belum ada lapangan tersedia',
+                                    style: AppTextStyles.bodyText.copyWith(
+                                      color: AppColors.textSecondary,
                                     ),
-                                  );
-                                },
+                                  ),
+                                ],
                               ),
+                            ),
+                          )
+                        : FieldCarousel(
+                            fields: fields,
+                            onFieldSelected: (field) {
+                              // Open booking dialog
+                              showDialog(
+                                context: context,
+                                builder: (context) =>
+                                    BookingDialog(field: field),
+                              );
+                            },
+                          ),
                   ],
                 ),
               ),
@@ -223,7 +230,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Booking Cepat', style: AppTextStyles.headerMedium),
+                        Text(
+                          'Booking Cepat',
+                          style: AppTextStyles.headerMedium,
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'Hubungi admin kami melalui WhatsApp untuk booking lapangan sekarang!',

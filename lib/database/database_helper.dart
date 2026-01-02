@@ -22,11 +22,7 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: _createDB,
-    );
+    return await openDatabase(path, version: 1, onCreate: _createDB);
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -102,7 +98,8 @@ class DatabaseHelper {
     // Insert sample fields
     await db.insert('fields', {
       'name': 'Lapangan A',
-      'description': 'Lapangan futsal indoor dengan rumput sintetis berkualitas',
+      'description':
+          'Lapangan futsal indoor dengan rumput sintetis berkualitas',
       'price_per_hour': 150000,
       'image_url': 'https://picsum.photos/400/300?random=1',
       'is_available': 1,
@@ -140,11 +137,7 @@ class DatabaseHelper {
 
   Future<User?> getUserById(int id) async {
     final db = await database;
-    final results = await db.query(
-      'users',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final results = await db.query('users', where: 'id = ?', whereArgs: [id]);
 
     if (results.isEmpty) return null;
     return User.fromMap(results.first);
@@ -163,6 +156,18 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [user.id],
     );
+  }
+
+  Future<void> resetDatabase() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'booking_lapangan.db');
+
+    // Delete existing database
+    await deleteDatabase(path);
+
+    // Recreate database with fresh seed data
+    _database = null;
+    await database; // This will trigger _createDB again
   }
 
   // Field CRUD operations
@@ -185,11 +190,7 @@ class DatabaseHelper {
 
   Future<Field?> getFieldById(int id) async {
     final db = await database;
-    final results = await db.query(
-      'fields',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final results = await db.query('fields', where: 'id = ?', whereArgs: [id]);
 
     if (results.isEmpty) return null;
     return Field.fromMap(results.first);
@@ -212,11 +213,7 @@ class DatabaseHelper {
 
   Future<int> deleteField(int id) async {
     final db = await database;
-    return await db.delete(
-      'fields',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.delete('fields', where: 'id = ?', whereArgs: [id]);
   }
 
   // Booking CRUD operations
@@ -238,7 +235,8 @@ class DatabaseHelper {
 
   Future<List<Booking>> getBookingsByUserId(int userId) async {
     final db = await database;
-    final results = await db.rawQuery('''
+    final results = await db.rawQuery(
+      '''
       SELECT 
         b.*,
         u.name as user_name,
@@ -249,13 +247,16 @@ class DatabaseHelper {
       INNER JOIN fields f ON b.field_id = f.id
       WHERE b.user_id = ?
       ORDER BY b.created_at DESC
-    ''', [userId]);
+    ''',
+      [userId],
+    );
     return results.map((map) => Booking.fromMap(map)).toList();
   }
 
   Future<List<Booking>> getBookingsByFieldId(int fieldId) async {
     final db = await database;
-    final results = await db.rawQuery('''
+    final results = await db.rawQuery(
+      '''
       SELECT 
         b.*,
         u.name as user_name,
@@ -266,7 +267,9 @@ class DatabaseHelper {
       INNER JOIN fields f ON b.field_id = f.id
       WHERE b.field_id = ?
       ORDER BY b.created_at DESC
-    ''', [fieldId]);
+    ''',
+      [fieldId],
+    );
     return results.map((map) => Booking.fromMap(map)).toList();
   }
 
@@ -287,11 +290,7 @@ class DatabaseHelper {
 
   Future<int> deleteBooking(int id) async {
     final db = await database;
-    return await db.delete(
-      'bookings',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.delete('bookings', where: 'id = ?', whereArgs: [id]);
   }
 
   // Statistics for admin dashboard
@@ -310,16 +309,17 @@ class DatabaseHelper {
     );
     final activeFields = activeFieldsResult.first['count'] as int;
 
-    // Today's revenue
+    // ✅ FIX: Today's revenue dari bookings yang sudah "completed"
     final today = DateTime.now();
-    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
     final todayRevenueResult = await db.rawQuery(
-      'SELECT SUM(total_price) as total FROM bookings WHERE booking_date = ? AND status = "confirmed"',
+      'SELECT SUM(total_price) as total FROM bookings WHERE booking_date = ?  AND status = "completed"', // ← CHANGE:  confirmed → completed
       [todayStr],
     );
     final todayRevenue = todayRevenueResult.first['total'] ?? 0;
 
-    // Active users (users with at least one booking)
+    // Active users
     final activeUsersResult = await db.rawQuery(
       'SELECT COUNT(DISTINCT user_id) as count FROM bookings',
     );
@@ -338,11 +338,11 @@ class DatabaseHelper {
     int fieldId,
     String bookingDate,
     String startTime,
-    String endTime,
-    {int? excludeBookingId}
-  ) async {
+    String endTime, {
+    int? excludeBookingId,
+  }) async {
     final db = await database;
-    
+
     String query = '''
       SELECT COUNT(*) as count FROM bookings 
       WHERE field_id = ? 
@@ -354,13 +354,14 @@ class DatabaseHelper {
         OR (start_time >= ? AND start_time < ?)
       )
     ''';
-    
+
     List<dynamic> args = [
       fieldId,
       bookingDate,
-      endTime, startTime,  // Existing ends after new starts
-      endTime, startTime,  // Existing starts before new ends (duplicate for SQL formatting)
-      startTime, endTime,  // Existing starts within new time range
+      endTime, startTime, // Existing ends after new starts
+      endTime,
+      startTime, // Existing starts before new ends (duplicate for SQL formatting)
+      startTime, endTime, // Existing starts within new time range
     ];
 
     if (excludeBookingId != null) {
@@ -376,5 +377,45 @@ class DatabaseHelper {
   Future<void> close() async {
     final db = await database;
     await db.close();
+  }
+
+  Future<void> _createRevenueTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS daily_revenue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        booking_id INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (booking_id) REFERENCES bookings (id)
+      )
+    ''');
+  }
+
+  Future<void> addTodaysRevenue(int amount, {int? bookingId}) async {
+    final db = await database;
+    final today = DateTime.now().toIso8601String().split('T')[0]; // YYYY-MM-DD
+
+    await db.insert('daily_revenue', {
+      'date': today,
+      'amount': amount,
+      'booking_id': bookingId,
+    });
+  }
+
+  // Get today's total revenue
+  Future<int> getTodaysRevenue() async {
+    final db = await database;
+    final today = DateTime.now().toIso8601String().split('T')[0];
+
+    final result = await db.rawQuery(
+      '''
+      SELECT SUM(amount) as total FROM daily_revenue 
+      WHERE date = ? 
+    ''',
+      [today],
+    );
+
+    return (result.first['total'] as int?) ?? 0;
   }
 }

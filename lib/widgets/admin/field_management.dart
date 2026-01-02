@@ -5,28 +5,30 @@ import '../../models/field.dart';
 import '../../widgets/admin/field_form.dart';
 
 class FieldManagementScreen extends StatefulWidget {
-  const FieldManagementScreen({Key? key}) : super(key: key);
+  const FieldManagementScreen({super.key}); // Fixed: use super parameter
 
   @override
   State<FieldManagementScreen> createState() => _FieldManagementScreenState();
 }
 
 class _FieldManagementScreenState extends State<FieldManagementScreen> {
-  // Contoh data lapangan (nanti akan diganti dengan data dari backend)
+  // ✅ Fixed: Update to use new Field model structure
   final List<Field> _fields = [
     Field(
-      id: '1',
+      id: 1, // int instead of String
       name: 'Lapangan A',
       description: 'Lapangan futsal indoor dengan rumput sintetis',
-      price: 150000,
+      pricePerHour: 150000, // Fixed: price → pricePerHour
       imageUrl: 'https://example.com/field-a.jpg',
+      isAvailable: true,
     ),
     Field(
-      id: '2',
+      id: 2,
       name: 'Lapangan B',
       description: 'Lapangan basket indoor dengan lantai vinyl',
-      price: 200000,
+      pricePerHour: 200000, // Fixed: price → pricePerHour
       imageUrl: 'https://example.com/field-b.jpg',
+      isAvailable: true,
     ),
   ];
 
@@ -50,22 +52,24 @@ class _FieldManagementScreenState extends State<FieldManagementScreen> {
                 FieldForm(
                   field: field,
                   onSubmit: (data) {
-                    // TODO: Implement create/update logic
                     setState(() {
                       if (field == null) {
-                        // Create new field
+                        // ✅ Fixed: Create new field with correct parameters
                         _fields.add(
                           Field(
-                            id: DateTime.now().toString(), // temporary ID
+                            id: DateTime.now()
+                                .millisecondsSinceEpoch, // temp ID as int
                             name: data['name'],
                             description: data['description'],
-                            price: data['price'],
+                            pricePerHour: int.parse(
+                              data['pricePerHour'].toString(),
+                            ), // Fixed: convert to int
                             imageUrl: data['imageUrl'],
-                            isAvailable: data['isAvailable'],
+                            isAvailable: data['isAvailable'] ?? true,
                           ),
                         );
                       } else {
-                        // Update existing field
+                        // ✅ Fixed: Update existing field
                         final index = _fields.indexWhere(
                           (f) => f.id == field.id,
                         );
@@ -74,9 +78,11 @@ class _FieldManagementScreenState extends State<FieldManagementScreen> {
                             id: field.id,
                             name: data['name'],
                             description: data['description'],
-                            price: data['price'],
+                            pricePerHour: int.parse(
+                              data['pricePerHour'].toString(),
+                            ), // Fixed
                             imageUrl: data['imageUrl'],
-                            isAvailable: data['isAvailable'],
+                            isAvailable: data['isAvailable'] ?? true,
                           );
                         }
                       }
@@ -201,7 +207,7 @@ class _FieldManagementScreenState extends State<FieldManagementScreen> {
                           top: Radius.circular(12),
                         ),
                         child: Image.network(
-                          field.imageUrl,
+                          field.imageUrl ?? '',
                           height: 200,
                           width: double.infinity,
                           fit: BoxFit.cover,
@@ -234,9 +240,11 @@ class _FieldManagementScreenState extends State<FieldManagementScreen> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: field.isAvailable
-                                        ? AppColors.secondary.withOpacity(0.1)
-                                        : AppColors.textSecondary.withOpacity(
-                                            0.1,
+                                        ? AppColors.secondary.withValues(
+                                            alpha: 0.1,
+                                          ) // ✅ Fixed deprecated withOpacity
+                                        : AppColors.textSecondary.withValues(
+                                            alpha: 0.1,
                                           ),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
@@ -255,12 +263,12 @@ class _FieldManagementScreenState extends State<FieldManagementScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              field.description,
+                              field.description ?? '',
                               style: AppTextStyles.bodyText,
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Rp ${field.price.toStringAsFixed(0)}/jam',
+                              'Rp ${field.pricePerHour.toStringAsFixed(0)}/jam', // ✅ Fixed: price → pricePerHour
                               style: AppTextStyles.headerMedium.copyWith(
                                 color: AppColors.primary,
                               ),
