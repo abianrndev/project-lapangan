@@ -10,6 +10,8 @@ import 'screens/admin/admin_dashboard.dart';
 import 'screens/admin/field_management.dart';
 import 'screens/admin/booking_management.dart';
 import 'screens/user/user_home.dart';
+import 'screens/user/profile_screen.dart';
+import 'screens/user/booking_history_screen.dart';
 
 void main() {
   runApp(
@@ -38,6 +40,14 @@ final _router = GoRouter(
     GoRoute(
       path: '/user',
       builder: (context, state) => const UserHomeScreen(),
+    ),
+    GoRoute(
+      path: '/user/profile',
+      builder: (context, state) => const ProfileScreen(),
+    ),
+    GoRoute(
+      path: '/user/bookings',
+      builder: (context, state) => const BookingHistoryScreen(),
     ),
     GoRoute(
       path: '/admin',
