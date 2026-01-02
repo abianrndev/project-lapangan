@@ -1,28 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../constants/colors.dart';
 import '../../constants/text_styles.dart';
 import '../../widgets/custom_button.dart';
 import '../../providers/auth_provider.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({Key? key}) : super(key: key);
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _phoneController = TextEditingController();
   bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -41,34 +48,51 @@ class _LoginScreenState extends State<LoginScreen> {
     if (value == null || value.isEmpty) {
       return 'Password tidak boleh kosong';
     }
+    if (value.length < 6) {
+      return 'Password minimal 6 karakter';
+    }
     return null;
   }
 
-  Future<void> _handleLogin() async {
+  String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Konfirmasi password tidak boleh kosong';
+    }
+    if (value != _passwordController.text) {
+      return 'Password tidak cocok';
+    }
+    return null;
+  }
+
+  Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final success = await authProvider.login(
-      _emailController.text.trim(),
-      _passwordController.text,
+    final result = await authProvider.register(
+      name: _nameController.text.trim(),
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+      phone: _phoneController.text.trim(),
     );
 
     if (!mounted) return;
 
-    if (success) {
-      // Navigate based on user role
-      if (authProvider.isAdmin) {
-        context.go('/admin');
-      } else {
-        context.go('/user');
-      }
+    if (result['success']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: AppColors.secondary,
+        ),
+      );
+      // Navigate to user home
+      context.go('/user');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Email atau password salah'),
+        SnackBar(
+          content: Text(result['message']),
           backgroundColor: Colors.red,
         ),
       );
@@ -81,6 +105,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          color: AppColors.textPrimary,
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -89,24 +122,42 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 60),
                 Text(
-                  'SportField',
+                  'Daftar Akun',
                   style: AppTextStyles.headerLarge.copyWith(
                     color: AppColors.primary,
-                    fontSize: 42,
+                    fontSize: 32,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Booking Lapangan Olahraga',
+                  'Buat akun baru untuk mulai booking',
                   style: AppTextStyles.bodyText.copyWith(
                     color: AppColors.textSecondary,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 48),
+                
+                // Name field
+                TextFormField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Nama Lengkap',
+                    prefixIcon: const Icon(Icons.person_outline),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Nama tidak boleh kosong';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
                 
                 // Email field
                 TextFormField(
@@ -120,6 +171,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   validator: _validateEmail,
+                ),
+                const SizedBox(height: 16),
+                
+                // Phone field
+                TextFormField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    labelText: 'Nomor Telepon (Opsional)',
+                    prefixIcon: const Icon(Icons.phone_outlined),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 
@@ -148,30 +213,57 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   validator: _validatePassword,
                 ),
+                const SizedBox(height: 16),
+                
+                // Confirm password field
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: !_isConfirmPasswordVisible,
+                  decoration: InputDecoration(
+                    labelText: 'Konfirmasi Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isConfirmPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                        });
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: _validateConfirmPassword,
+                ),
                 const SizedBox(height: 32),
                 
-                // Login button
+                // Register button
                 authProvider.isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : CustomButton(
-                        text: 'Masuk',
-                        onPressed: _handleLogin,
+                        text: 'Daftar',
+                        onPressed: _handleRegister,
                         isFullWidth: true,
                       ),
                 const SizedBox(height: 16),
                 
-                // Register link
+                // Login link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Belum punya akun? ',
+                      'Sudah punya akun? ',
                       style: AppTextStyles.bodyText,
                     ),
                     GestureDetector(
-                      onTap: () => context.push('/register'),
+                      onTap: () => context.pop(),
                       child: Text(
-                        'Daftar',
+                        'Masuk',
                         style: AppTextStyles.bodyText.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
@@ -179,43 +271,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 24),
-                
-                // Demo credentials info
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Demo Credentials:',
-                        style: AppTextStyles.headerMedium.copyWith(
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Admin:\nemail: admin@lapangan.com\npassword: admin123',
-                        style: AppTextStyles.bodyText.copyWith(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'User:\nemail: user@test.com\npassword: user123',
-                        style: AppTextStyles.bodyText.copyWith(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ],
             ),
@@ -225,4 +280,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

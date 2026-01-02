@@ -1,17 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'providers/auth_provider.dart';
 import 'providers/booking_provider.dart';
+import 'providers/field_provider.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/register_screen.dart';
 import 'screens/admin/admin_dashboard.dart';
 import 'screens/admin/field_management.dart';
 import 'screens/admin/booking_management.dart';
 import 'screens/user/user_home.dart';
+import 'screens/user/profile_screen.dart';
+import 'screens/user/booking_history_screen.dart';
 
 void main() {
   runApp(
     MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => BookingProvider())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => BookingProvider()),
+        ChangeNotifierProvider(create: (_) => FieldProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -20,8 +29,26 @@ void main() {
 final _router = GoRouter(
   initialLocation: '/login',
   routes: [
-    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-    GoRoute(path: '/user', builder: (context, state) => const UserHomeScreen()),
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/register',
+      builder: (context, state) => const RegisterScreen(),
+    ),
+    GoRoute(
+      path: '/user',
+      builder: (context, state) => const UserHomeScreen(),
+    ),
+    GoRoute(
+      path: '/user/profile',
+      builder: (context, state) => const ProfileScreen(),
+    ),
+    GoRoute(
+      path: '/user/bookings',
+      builder: (context, state) => const BookingHistoryScreen(),
+    ),
     GoRoute(
       path: '/admin',
       builder: (context, state) => const AdminDashboard(),
@@ -49,3 +76,4 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+

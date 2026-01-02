@@ -1,34 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../constants/colors.dart';
 import '../../constants/text_styles.dart';
 import '../../models/field.dart';
+import '../../models/booking.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/booking_provider.dart';
 
-// Simple booking dialog: pilih tanggal dan jam (start + end), masukkan nama pemesan (userName)
 class BookingDialog extends StatefulWidget {
   final Field field;
-  final Function(
-    String userName,
-    DateTime date,
-    String startTime,
-    String endTime,
-    String? note,
-  )
-  onSubmit;
 
-  const BookingDialog({Key? key, required this.field, required this.onSubmit})
-    : super(key: key);
+  const BookingDialog({Key? key, required this.field}) : super(key: key);
 
   @override
   State<BookingDialog> createState() => _BookingDialogState();
 }
 
 class _BookingDialogState extends State<BookingDialog> {
+  static const int defaultBookingDurationHours = 2;
+  
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
   final _noteController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _startTime = const TimeOfDay(hour: 14, minute: 0);
-  TimeOfDay _endTime = const TimeOfDay(hour: 15, minute: 0);
+  TimeOfDay _endTime = const TimeOfDay(hour: 16, minute: 0);
+  bool _isSubmitting = false;
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
@@ -56,7 +52,7 @@ class _BookingDialogState extends State<BookingDialog> {
         final endMinutes = _endTime.hour * 60 + _endTime.minute;
         if (endMinutes <= startMinutes) {
           _endTime = TimeOfDay(
-            hour: _startTime.hour + 1,
+            hour: (_startTime.hour + defaultBookingDurationHours) % 24,
             minute: _startTime.minute,
           );
         }
@@ -79,6 +75,7 @@ class _BookingDialogState extends State<BookingDialog> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Waktu akhir harus lebih besar dari waktu mulai'),
+              backgroundColor: Colors.red,
             ),
           );
         }
@@ -92,32 +89,101 @@ class _BookingDialogState extends State<BookingDialog> {
     return '$h:$m';
   }
 
-  void _submit() {
+  int _calculateHours() {
+    final startMinutes = _startTime.hour * 60 + _startTime.minute;
+    final endMinutes = _endTime.hour * 60 + _endTime.minute;
+    final durationMinutes = endMinutes - startMinutes;
+    return (durationMinutes / 60).ceil();
+  }
+
+  int _calculateTotalPrice() {
+    final hours = _calculateHours();
+    return hours * widget.field.pricePerHour;
+  }
+
+  Future<void> _submit() async {
     if (_formKey.currentState!.validate()) {
-      final start = _formatTimeOfDay(_startTime);
-      final end = _formatTimeOfDay(_endTime);
-      widget.onSubmit(
-        _nameController.text.trim(),
-        DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day),
-        start,
-        end,
-        _noteController.text.trim().isEmpty
-            ? null
-            : _noteController.text.trim(),
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      if (authProvider.currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Anda harus login terlebih dahulu'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final startMinutes = _startTime.hour * 60 + _startTime.minute;
+      final endMinutes = _endTime.hour * 60 + _endTime.minute;
+      if (endMinutes <= startMinutes) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Waktu akhir harus lebih besar dari waktu mulai'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = true;
+      });
+
+      final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+      
+      final booking = Booking(
+        userId: authProvider.currentUser!.id!,
+        fieldId: widget.field.id!,
+        fieldName: widget.field.name,
+        userName: authProvider.currentUser!.name,
+        bookingDate: '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
+        startTime: _formatTimeOfDay(_startTime),
+        endTime: _formatTimeOfDay(_endTime),
+        totalPrice: _calculateTotalPrice(),
+        status: 'pending',
+        note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
       );
-      Navigator.of(context).pop();
+
+      final result = await bookingProvider.createBooking(booking);
+
+      if (!mounted) return;
+
+      setState(() {
+        _isSubmitting = false;
+      });
+
+      if (result['success']) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: AppColors.secondary,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
     _noteController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final hours = _calculateHours();
+    final totalPrice = _calculateTotalPrice();
+
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -135,66 +201,134 @@ class _BookingDialogState extends State<BookingDialog> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(labelText: 'Nama Anda'),
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'Nama diperlukan'
-                          : null,
+                    // Date picker
+                    OutlinedButton.icon(
+                      onPressed: _pickDate,
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text(
+                        'Tanggal: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
                     ),
                     const SizedBox(height: 12),
+                    
+                    // Time pickers
                     Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton(
-                            onPressed: _pickDate,
-                            child: Text(
-                              'Pilih Tanggal: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
+                          child: OutlinedButton.icon(
                             onPressed: _pickStartTime,
-                            child: Text(
+                            icon: const Icon(Icons.access_time),
+                            label: Text(
                               'Mulai: ${_formatTimeOfDay(_startTime)}',
                             ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: OutlinedButton(
+                          child: OutlinedButton.icon(
                             onPressed: _pickEndTime,
-                            child: Text(
+                            icon: const Icon(Icons.access_time),
+                            label: Text(
                               'Selesai: ${_formatTimeOfDay(_endTime)}',
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
+                    
+                    // Price calculation
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Durasi:',
+                                style: AppTextStyles.bodyText,
+                              ),
+                              Text(
+                                '$hours jam',
+                                style: AppTextStyles.headerMedium,
+                              ),
+                            ],
+                          ),
+                          const Divider(),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Total Harga:',
+                                style: AppTextStyles.bodyText.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                'Rp ${totalPrice.toString()}',
+                                style: AppTextStyles.headerMedium.copyWith(
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Notes field
                     TextFormField(
                       controller: _noteController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Catatan (opsional)',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       maxLines: 2,
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _submit,
-                            child: const Text('Kirim Permintaan Booking'),
+                    
+                    // Submit button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isSubmitting ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                      ],
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text(
+                                'Kirim Permintaan Booking',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
                     ),
                   ],
                 ),
@@ -206,3 +340,4 @@ class _BookingDialogState extends State<BookingDialog> {
     );
   }
 }
+
