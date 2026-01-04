@@ -1,128 +1,120 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:crypto/crypto.dart';
-import 'dart:convert';
 import '../models/user.dart';
 import '../models/field.dart';
 import '../models/booking.dart';
 
 class DatabaseHelper {
-  static final DatabaseHelper instance = DatabaseHelper._init();
+  static final DatabaseHelper instance = DatabaseHelper._internal();
   static Database? _database;
 
-  DatabaseHelper._init();
+  DatabaseHelper._internal();
 
   Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDB('booking_lapangan.db');
+    _database ??= await _createDB();
     return _database!;
   }
 
-  Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
+  Future<Database> _createDB() async {
+    String path = join(await getDatabasesPath(), 'sport_field. db');
 
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(
+      path,
+      version: 2,
+      onCreate: (db, version) async {
+        // Users table
+        await db.execute('''
+          CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            phone TEXT,
+            role TEXT NOT NULL DEFAULT 'user',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        ''');
+
+        // Fields table
+        await db.execute('''
+        CREATE TABLE fields (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          description TEXT NOT NULL,
+          price_per_hour INTEGER NOT NULL,
+          image_url TEXT,
+          is_available INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+      ''');
+
+        // Bookings table
+        await db.execute('''
+        CREATE TABLE bookings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          field_id INTEGER NOT NULL,
+          booking_date TEXT NOT NULL,
+          start_time TEXT NOT NULL,
+          end_time TEXT NOT NULL,
+          total_price INTEGER NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          note TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id),
+          FOREIGN KEY (field_id) REFERENCES fields (id)
+        )
+      ''');
+
+        // Revenue table
+        await db.execute('''
+        CREATE TABLE daily_revenue (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          date TEXT NOT NULL,
+          amount INTEGER NOT NULL,
+          booking_id INTEGER,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (booking_id) REFERENCES bookings (id)
+        )
+      ''');
+
+        // Insert default admin
+        await db.insert('users', {
+          'name': 'Admin',
+          'email': 'admin@lapangan.com',
+          'password': 'admin123',
+          'phone': null,
+          'role': 'admin',
+        });
+
+        // Insert sample fields
+        await db.insert('fields', {
+          'name': 'Lapangan A',
+          'description':
+              'Lapangan futsal dengan kualitas rumput sintetis terbaik',
+          'price_per_hour': 100000,
+          'image_url': '',
+          'is_available': 1,
+        });
+
+        await db.insert('fields', {
+          'name': 'Lapangan B',
+          'description': 'Lapangan indoor ber-AC dengan fasilitas lengkap',
+          'price_per_hour': 150000,
+          'image_url': '',
+          'is_available': 1,
+        });
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        // ✅ ADD migration untuk existing database
+        if (oldVersion < 2) {
+          await db.execute('ALTER TABLE users ADD COLUMN phone TEXT');
+        }
+      },
+    );
   }
 
-  Future<void> _createDB(Database db, int version) async {
-    // Users table
-    await db.execute('''
-      CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        phone TEXT,
-        role TEXT DEFAULT 'user',
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )
-    ''');
-
-    // Fields table
-    await db.execute('''
-      CREATE TABLE fields (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        description TEXT,
-        price_per_hour INTEGER NOT NULL,
-        image_url TEXT,
-        is_available INTEGER DEFAULT 1,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )
-    ''');
-
-    // Bookings table
-    await db.execute('''
-      CREATE TABLE bookings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        field_id INTEGER,
-        booking_date TEXT NOT NULL,
-        start_time TEXT NOT NULL,
-        end_time TEXT NOT NULL,
-        total_price INTEGER NOT NULL,
-        status TEXT DEFAULT 'pending',
-        note TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id),
-        FOREIGN KEY (field_id) REFERENCES fields (id)
-      )
-    ''');
-
-    // Helper function to hash password
-    String hashPassword(String password) {
-      final bytes = utf8.encode(password);
-      final digest = sha256.convert(bytes);
-      return digest.toString();
-    }
-
-    // Insert default admin user with hashed password
-    await db.insert('users', {
-      'name': 'Admin',
-      'email': 'admin@lapangan.com',
-      'password': hashPassword('admin123'),
-      'phone': '08123456789',
-      'role': 'admin',
-    });
-
-    // Insert default user with hashed password
-    await db.insert('users', {
-      'name': 'User Test',
-      'email': 'user@test.com',
-      'password': hashPassword('user123'),
-      'phone': '08123456789',
-      'role': 'user',
-    });
-
-    // Insert sample fields
-    await db.insert('fields', {
-      'name': 'Lapangan A',
-      'description':
-          'Lapangan futsal indoor dengan rumput sintetis berkualitas',
-      'price_per_hour': 150000,
-      'image_url': 'https://picsum.photos/400/300?random=1',
-      'is_available': 1,
-    });
-
-    await db.insert('fields', {
-      'name': 'Lapangan B',
-      'description': 'Lapangan basket indoor dengan lantai vinyl',
-      'price_per_hour': 200000,
-      'image_url': 'https://picsum.photos/400/300?random=2',
-      'is_available': 1,
-    });
-
-    await db.insert('fields', {
-      'name': 'Lapangan C',
-      'description': 'Lapangan badminton indoor dengan pencahayaan optimal',
-      'price_per_hour': 100000,
-      'image_url': 'https://picsum.photos/400/300?random=3',
-      'is_available': 1,
-    });
-  }
-
-  // User CRUD operations
+  // ===== USER METHODS =====
   Future<User?> getUserByEmail(String email) async {
     final db = await database;
     final results = await db.query(
@@ -130,17 +122,14 @@ class DatabaseHelper {
       where: 'email = ?',
       whereArgs: [email],
     );
-
-    if (results.isEmpty) return null;
-    return User.fromMap(results.first);
+    return results.isNotEmpty ? User.fromMap(results.first) : null;
   }
 
+  // ✅ ADD:  Get user by ID
   Future<User?> getUserById(int id) async {
     final db = await database;
     final results = await db.query('users', where: 'id = ?', whereArgs: [id]);
-
-    if (results.isEmpty) return null;
-    return User.fromMap(results.first);
+    return results.isNotEmpty ? User.fromMap(results.first) : null;
   }
 
   Future<int> createUser(User user) async {
@@ -148,6 +137,7 @@ class DatabaseHelper {
     return await db.insert('users', user.toMap());
   }
 
+  // ✅ ADD: Update user
   Future<int> updateUser(User user) async {
     final db = await database;
     return await db.update(
@@ -158,42 +148,23 @@ class DatabaseHelper {
     );
   }
 
-  Future<void> resetDatabase() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'booking_lapangan.db');
-
-    // Delete existing database
-    await deleteDatabase(path);
-
-    // Recreate database with fresh seed data
-    _database = null;
-    await database; // This will trigger _createDB again
-  }
-
-  // Field CRUD operations
+  // ===== FIELD METHODS =====
   Future<List<Field>> getAllFields() async {
     final db = await database;
     final results = await db.query('fields', orderBy: 'created_at DESC');
     return results.map((map) => Field.fromMap(map)).toList();
   }
 
+  // ✅ ADD: Get available fields only
   Future<List<Field>> getAvailableFields() async {
     final db = await database;
     final results = await db.query(
       'fields',
-      where: 'is_available = ?',
+      where: 'is_available = ? ',
       whereArgs: [1],
       orderBy: 'created_at DESC',
     );
     return results.map((map) => Field.fromMap(map)).toList();
-  }
-
-  Future<Field?> getFieldById(int id) async {
-    final db = await database;
-    final results = await db.query('fields', where: 'id = ?', whereArgs: [id]);
-
-    if (results.isEmpty) return null;
-    return Field.fromMap(results.first);
   }
 
   Future<int> createField(Field field) async {
@@ -216,7 +187,7 @@ class DatabaseHelper {
     return await db.delete('fields', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Booking CRUD operations
+  // ===== BOOKING METHODS =====
   Future<List<Booking>> getAllBookings() async {
     final db = await database;
     final results = await db.rawQuery('''
@@ -227,7 +198,7 @@ class DatabaseHelper {
         f.price_per_hour
       FROM bookings b
       INNER JOIN users u ON b.user_id = u.id
-      INNER JOIN fields f ON b.field_id = f.id
+      INNER JOIN fields f ON b. field_id = f.id
       ORDER BY b.created_at DESC
     ''');
     return results.map((map) => Booking.fromMap(map)).toList();
@@ -253,6 +224,7 @@ class DatabaseHelper {
     return results.map((map) => Booking.fromMap(map)).toList();
   }
 
+  // ✅ ADD: Get bookings by field ID
   Future<List<Booking>> getBookingsByFieldId(int fieldId) async {
     final db = await database;
     final results = await db.rawQuery(
@@ -293,47 +265,6 @@ class DatabaseHelper {
     return await db.delete('bookings', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Statistics for admin dashboard
-  Future<Map<String, dynamic>> getDashboardStats() async {
-    final db = await database;
-
-    // Total bookings
-    final totalBookingsResult = await db.rawQuery(
-      'SELECT COUNT(*) as count FROM bookings',
-    );
-    final totalBookings = totalBookingsResult.first['count'] as int;
-
-    // Active fields
-    final activeFieldsResult = await db.rawQuery(
-      'SELECT COUNT(*) as count FROM fields WHERE is_available = 1',
-    );
-    final activeFields = activeFieldsResult.first['count'] as int;
-
-    // ✅ FIX: Today's revenue dari bookings yang sudah "completed"
-    final today = DateTime.now();
-    final todayStr =
-        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-    final todayRevenueResult = await db.rawQuery(
-      'SELECT SUM(total_price) as total FROM bookings WHERE booking_date = ?  AND status = "completed"', // ← CHANGE:  confirmed → completed
-      [todayStr],
-    );
-    final todayRevenue = todayRevenueResult.first['total'] ?? 0;
-
-    // Active users
-    final activeUsersResult = await db.rawQuery(
-      'SELECT COUNT(DISTINCT user_id) as count FROM bookings',
-    );
-    final activeUsers = activeUsersResult.first['count'] as int;
-
-    return {
-      'totalBookings': totalBookings,
-      'activeFields': activeFields,
-      'todayRevenue': todayRevenue,
-      'activeUsers': activeUsers,
-    };
-  }
-
-  // Check for booking conflicts
   Future<bool> hasBookingConflict(
     int fieldId,
     String bookingDate,
@@ -345,57 +276,36 @@ class DatabaseHelper {
 
     String query = '''
       SELECT COUNT(*) as count FROM bookings 
-      WHERE field_id = ? 
-      AND booking_date = ? 
-      AND status NOT IN ('rejected', 'cancelled')
-      AND (
-        (start_time < ? AND end_time > ?)
-        OR (start_time < ? AND end_time > ?)
-        OR (start_time >= ? AND start_time < ?)
-      )
+      WHERE field_id = ? AND booking_date = ? AND status IN ('pending', 'confirmed')
+      AND ((start_time < ? AND end_time > ?) OR (start_time < ? AND end_time > ?) OR (start_time >= ? AND start_time < ?) OR (end_time > ?  AND end_time <= ?))
     ''';
 
-    List<dynamic> args = [
+    List<dynamic> params = [
       fieldId,
       bookingDate,
-      endTime, startTime, // Existing ends after new starts
+      startTime,
+      startTime,
       endTime,
-      startTime, // Existing starts before new ends (duplicate for SQL formatting)
-      startTime, endTime, // Existing starts within new time range
+      endTime,
+      startTime,
+      endTime,
+      startTime,
+      endTime,
     ];
 
     if (excludeBookingId != null) {
       query += ' AND id != ?';
-      args.add(excludeBookingId);
+      params.add(excludeBookingId);
     }
 
-    final result = await db.rawQuery(query, args);
-    final count = result.first['count'] as int;
-    return count > 0;
+    final result = await db.rawQuery(query, params);
+    return (result.first['count'] as int) > 0;
   }
 
-  Future<void> close() async {
-    final db = await database;
-    await db.close();
-  }
-
-  Future<void> _createRevenueTable(Database db) async {
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS daily_revenue (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT NOT NULL,
-        amount INTEGER NOT NULL,
-        booking_id INTEGER,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (booking_id) REFERENCES bookings (id)
-      )
-    ''');
-  }
-
+  // ===== REVENUE METHODS =====
   Future<void> addTodaysRevenue(int amount, {int? bookingId}) async {
     final db = await database;
-    final today = DateTime.now().toIso8601String().split('T')[0]; // YYYY-MM-DD
-
+    final today = DateTime.now().toIso8601String().split('T')[0];
     await db.insert('daily_revenue', {
       'date': today,
       'amount': amount,
@@ -403,19 +313,42 @@ class DatabaseHelper {
     });
   }
 
-  // Get today's total revenue
   Future<int> getTodaysRevenue() async {
     final db = await database;
     final today = DateTime.now().toIso8601String().split('T')[0];
-
     final result = await db.rawQuery(
-      '''
-      SELECT SUM(amount) as total FROM daily_revenue 
-      WHERE date = ? 
-    ''',
+      'SELECT SUM(amount) as total FROM daily_revenue WHERE date = ? ',
       [today],
     );
-
     return (result.first['total'] as int?) ?? 0;
+  }
+
+  // ===== DASHBOARD STATS =====
+  Future<Map<String, dynamic>> getDashboardStats() async {
+    final db = await database;
+
+    final totalBookingsResult = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM bookings',
+    );
+    final totalBookings = totalBookingsResult.first['count'] as int;
+
+    final activeFieldsResult = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM fields WHERE is_available = 1',
+    );
+    final activeFields = activeFieldsResult.first['count'] as int;
+
+    final todayRevenue = await getTodaysRevenue();
+
+    final activeUsersResult = await db.rawQuery(
+      'SELECT COUNT(DISTINCT user_id) as count FROM bookings',
+    );
+    final activeUsers = activeUsersResult.first['count'] as int;
+
+    return {
+      'totalBookings': totalBookings,
+      'activeFields': activeFields,
+      'todayRevenue': todayRevenue,
+      'activeUsers': activeUsers,
+    };
   }
 }

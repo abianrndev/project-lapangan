@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../models/field.dart';
 import '../../constants/colors.dart';
 import '../../constants/text_styles.dart';
-import '../../models/field.dart';
-import '../custom_button.dart';
+import 'simple_image_upload.dart';
 
 class FieldForm extends StatefulWidget {
-  final Field? field; // null untuk create, non-null untuk edit
+  final Field? field;
   final Function(Map<String, dynamic>) onSubmit;
 
   const FieldForm({Key? key, this.field, required this.onSubmit})
@@ -20,18 +20,18 @@ class _FieldFormState extends State<FieldForm> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
-  final _imageUrlController = TextEditingController();
+
+  String? _selectedImagePath;
   bool _isAvailable = true;
 
   @override
   void initState() {
     super.initState();
     if (widget.field != null) {
-      // Populate form if editing
       _nameController.text = widget.field!.name;
       _descriptionController.text = widget.field!.description;
-      _priceController.text = widget.field!.price.toString();
-      _imageUrlController.text = widget.field!.imageUrl;
+      _priceController.text = widget.field!.pricePerHour.toString();
+      _selectedImagePath = widget.field!.imageUrl;
       _isAvailable = widget.field!.isAvailable;
     }
   }
@@ -41,19 +41,24 @@ class _FieldFormState extends State<FieldForm> {
     _nameController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
-    _imageUrlController.dispose();
     super.dispose();
   }
 
-  void _submitForm() {
+  void _handleSubmit() {
     if (_formKey.currentState!.validate()) {
-      widget.onSubmit({
-        'name': _nameController.text,
-        'description': _descriptionController.text,
-        'price': double.parse(_priceController.text),
-        'imageUrl': _imageUrlController.text,
+      final formData = {
+        'name': _nameController.text.trim(),
+        'description': _descriptionController.text.trim(),
+        'pricePerHour': int.parse(_priceController.text),
+        'imageUrl': _selectedImagePath ?? '',
         'isAvailable': _isAvailable,
-      });
+      };
+
+      print('🚀 Submitting field data: ');
+      print('   Name: ${formData['name']}');
+      print('   Image: ${formData['imageUrl']}');
+
+      widget.onSubmit(formData);
     }
   }
 
@@ -61,102 +66,129 @@ class _FieldFormState extends State<FieldForm> {
   Widget build(BuildContext context) {
     return Form(
       key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextFormField(
-            controller: _nameController,
-            decoration: InputDecoration(
-              labelText: 'Nama Lapangan',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Image upload widget
+            SimpleImageUpload(
+              currentImagePath: _selectedImagePath,
+              onImageSelected: (imagePath) {
+                setState(() {
+                  _selectedImagePath = imagePath;
+                });
+                print('📸 Image selected: $imagePath');
+              },
+            ),
+
+            const SizedBox(height: 20),
+
+            // Name field
+            TextFormField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: 'Nama Lapangan',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                prefixIcon: const Icon(Icons.sports_soccer),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Nama lapangan tidak boleh kosong';
+                }
+                return null;
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // Description field
+            TextFormField(
+              controller: _descriptionController,
+              decoration: InputDecoration(
+                labelText: 'Deskripsi',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                prefixIcon: const Icon(Icons.description),
+              ),
+              maxLines: 3,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Deskripsi tidak boleh kosong';
+                }
+                return null;
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // Price field
+            TextFormField(
+              controller: _priceController,
+              decoration: InputDecoration(
+                labelText: 'Harga per Jam (Rp)',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                prefixIcon: const Icon(Icons.payments),
+              ),
+              keyboardType: TextInputType.number,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Harga tidak boleh kosong';
+                }
+                final price = int.tryParse(value);
+                if (price == null || price <= 0) {
+                  return 'Harga harus berupa angka positif';
+                }
+                return null;
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // Availability switch
+            SwitchListTile(
+              title: const Text('Lapangan Tersedia'),
+              subtitle: const Text('Aktifkan jika lapangan dapat dibooking'),
+              value: _isAvailable,
+              onChanged: (value) {
+                setState(() {
+                  _isAvailable = value;
+                });
+              },
+              activeColor: AppColors.primary,
+            ),
+
+            const SizedBox(height: 24),
+
+            // Submit button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _handleSubmit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  widget.field == null ? 'Tambah Lapangan' : 'Update Lapangan',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Nama lapangan tidak boleh kosong';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _descriptionController,
-            decoration: InputDecoration(
-              labelText: 'Deskripsi',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            maxLines: 3,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Deskripsi tidak boleh kosong';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _priceController,
-            decoration: InputDecoration(
-              labelText: 'Harga per Jam',
-              prefixText: 'Rp ',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            keyboardType: TextInputType.number,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Harga tidak boleh kosong';
-              }
-              if (double.tryParse(value) == null) {
-                return 'Harga harus berupa angka';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _imageUrlController,
-            decoration: InputDecoration(
-              labelText: 'URL Gambar',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'URL gambar tidak boleh kosong';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          SwitchListTile(
-            title: const Text('Status Lapangan'),
-            subtitle: Text(
-              _isAvailable ? 'Tersedia' : 'Tidak Tersedia',
-              style: AppTextStyles.bodyText.copyWith(
-                color: _isAvailable
-                    ? AppColors.secondary
-                    : AppColors.textSecondary,
-              ),
-            ),
-            value: _isAvailable,
-            onChanged: (bool value) {
-              setState(() {
-                _isAvailable = value;
-              });
-            },
-          ),
-          const SizedBox(height: 24),
-          CustomButton(
-            text: widget.field == null ? 'Tambah Lapangan' : 'Simpan Perubahan',
-            onPressed: _submitForm,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

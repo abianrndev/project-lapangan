@@ -32,9 +32,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _loadData() async {
-    final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+    final bookingProvider = Provider.of<BookingProvider>(
+      context,
+      listen: false,
+    );
     final fieldProvider = Provider.of<FieldProvider>(context, listen: false);
-    
+
     // Load bookings and fields
     await Future.wait([
       bookingProvider.loadAllBookings(),
@@ -44,7 +47,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     // Load statistics
     final db = DatabaseHelper.instance;
     final stats = await db.getDashboardStats();
-    
+
     setState(() {
       _stats = stats;
       _isLoadingStats = false;
@@ -85,7 +88,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
               context.go('/login');
             },
           ),
-          const SizedBox(width: 8),
+          // const SizedBox(width: 8),
+          // ElevatedButton(
+          //   onPressed: () => context.go('/test-image'),
+          //   child: const Text('🧪 Test Image Picker'),
+          // ),
         ],
       ),
       body: RefreshIndicator(
@@ -124,7 +131,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           color: AppColors.secondary,
                         ),
                         StatCard(
-                          title: 'Pendapatan Hari Ini',
+                          title: 'Pendapatan',
                           value: _formatCurrency(_stats!['todayRevenue']),
                           icon: Icons.payments,
                           color: Colors.orange,
@@ -151,12 +158,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
                   QuickActionCard(
-                    title: 'Kelola\nLapangan',
+                    title: 'Lapangan',
                     icon: Icons.sports_soccer,
                     onTap: () => context.push('/admin/fields'),
                   ),
                   QuickActionCard(
-                    title: 'Kelola\nBooking',
+                    title: 'Booking',
                     icon: Icons.calendar_month,
                     onTap: () => context.push('/admin/bookings'),
                   ),
@@ -182,79 +189,80 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               bookingProvider.isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : recentBookings.isEmpty
-                      ? Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(32.0),
-                            child: Center(
-                              child: Text(
-                                'Belum ada booking',
-                                style: AppTextStyles.bodyText.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
+                  ? Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: Center(
+                          child: Text(
+                            'Belum ada booking',
+                            style: AppTextStyles.bodyText.copyWith(
+                              color: AppColors.textSecondary,
                             ),
                           ),
-                        )
-                      : ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: recentBookings.length,
-                          itemBuilder: (context, index) {
-                            final booking = recentBookings[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.all(16),
-                                title: Text(
-                                  booking.userName,
-                                  style: AppTextStyles.headerMedium,
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${booking.fieldName} • ${booking.startTime} - ${booking.endTime}',
-                                      style: AppTextStyles.bodyText,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: _getStatusColor(booking.status)
-                                            .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        booking.status.toUpperCase(),
-                                        style: AppTextStyles.bodyText.copyWith(
-                                          color: _getStatusColor(booking.status),
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.chevron_right),
-                                  onPressed: () {
-                                    context.push('/admin/bookings');
-                                  },
-                                ),
-                              ),
-                            );
-                          },
                         ),
+                      ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: recentBookings.length,
+                      itemBuilder: (context, index) {
+                        final booking = recentBookings[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(16),
+                            title: Text(
+                              booking.userName,
+                              style: AppTextStyles.headerMedium,
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${booking.fieldName} • ${booking.startTime} - ${booking.endTime}',
+                                  style: AppTextStyles.bodyText,
+                                ),
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _getStatusColor(
+                                      booking.status,
+                                    ).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    booking.status.toUpperCase(),
+                                    style: AppTextStyles.bodyText.copyWith(
+                                      color: _getStatusColor(booking.status),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.chevron_right),
+                              onPressed: () {
+                                context.push('/admin/bookings');
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ],
           ),
         ),
@@ -277,4 +285,3 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 }
-

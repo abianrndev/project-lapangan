@@ -3,16 +3,18 @@ class User {
   final String name;
   final String email;
   final String password;
-  final String? phone;
-  final String role; // 'admin' or 'user'
+  final String? phone; // ← Make optional
+  final String role;
   final DateTime? createdAt;
+
+  bool get isAdmin => role == 'admin';
 
   User({
     this.id,
     required this.name,
     required this.email,
     required this.password,
-    this.phone,
+    this.phone, // ← Optional parameter
     this.role = 'user',
     this.createdAt,
   });
@@ -24,7 +26,7 @@ class User {
       'name': name,
       'email': email,
       'password': password,
-      'phone': phone,
+      'phone': phone, // ← Can be null
       'role': role,
       'created_at': createdAt?.toIso8601String(),
     };
@@ -37,8 +39,8 @@ class User {
       name: map['name'] as String,
       email: map['email'] as String,
       password: map['password'] as String,
-      phone: map['phone'] as String?,
-      role: map['role'] as String? ?? 'user',
+      phone: map['phone'] as String?, // ← Can be null
+      role: map['role'] as String,
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'] as String)
           : null,
@@ -66,5 +68,8 @@ class User {
     );
   }
 
-  bool get isAdmin => role == 'admin';
+  @override
+  String toString() {
+    return 'User{id:  $id, name: $name, email: $email, role: $role}';
+  }
 }

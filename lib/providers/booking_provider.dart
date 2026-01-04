@@ -9,6 +9,35 @@ class BookingProvider extends ChangeNotifier {
   List<Booking> get bookings => List.unmodifiable(_bookings);
   bool get isLoading => _isLoading;
 
+  List<Booking> _userBookings = [];
+  List<Booking> get userBookings => _userBookings;
+
+  // Load bookings for specific user
+  Future<void> loadUserBookings(int userId) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final db = DatabaseHelper.instance;
+      _userBookings = await db.getBookingsByUserId(userId);
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      print('Error loading user bookings: $e');
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  List<Booking> getUserBookingsByStatus(String status) {
+    return _userBookings.where((booking) => booking.status == status).toList();
+  }
+
+  // Get booking count by status for user
+  int getUserBookingCount(String status) {
+    return getUserBookingsByStatus(status).length;
+  }
+
   // Load all bookings from database
   Future<void> loadAllBookings() async {
     _isLoading = true;

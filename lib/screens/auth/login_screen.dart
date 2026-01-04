@@ -100,14 +100,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Booking Lapangan Olahraga',
+                  'Booking Lapangan Futsal',
                   style: AppTextStyles.bodyText.copyWith(
                     color: AppColors.textSecondary,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 48),
-                
+
                 // Email field
                 TextFormField(
                   controller: _emailController,
@@ -122,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   validator: _validateEmail,
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Password field
                 TextFormField(
                   controller: _passwordController,
@@ -149,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   validator: _validatePassword,
                 ),
                 const SizedBox(height: 32),
-                
+
                 // Login button
                 authProvider.isLoading
                     ? const Center(child: CircularProgressIndicator())
@@ -159,15 +159,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         isFullWidth: true,
                       ),
                 const SizedBox(height: 16),
-                
+
                 // Register link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Belum punya akun? ',
-                      style: AppTextStyles.bodyText,
-                    ),
+                    Text('Belum punya akun? ', style: AppTextStyles.bodyText),
                     GestureDetector(
                       onTap: () => context.push('/register'),
                       child: Text(
@@ -181,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Demo credentials info
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -225,4 +222,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
